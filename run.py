@@ -213,8 +213,7 @@ class Game:
                 highlighted = (now <= self.highlight_until_ms) and ((c, r) in self.highlight_targets)
                 self.renderer.draw_cell(c, r, highlighted)
         self.renderer.draw_result_overlay(self._result_text())
-        
-        #NEW: for "RESTART"
+         #NEW: for "RESTART"
         result_text = self._result_text()
         if result_text:
             # Draw the game over or win overlay
