@@ -96,6 +96,16 @@ class Renderer:
         rect = label.get_rect(center=(config.width // 2, config.height // 2))
         self.screen.blit(label, rect)
 
+        #NEW: PRESS "R" TO RESTART
+    def draw_restart(self,text:str)->None:
+        overlay = pygame.Surface((config.width,config.height),pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, config.result_overlay_alpha))
+        self.screen.blit(overlay, (0, 0))
+        message="Press R to restart"
+        label = self.result_font.render(message, True, config.color_result)
+        rect = label.get_rect(center=(config.width // 2, config.height // 2+50))
+        self.screen.blit(label,rect)
+
 
 class InputController:
     """Translates input events into game and board actions."""
@@ -203,6 +213,15 @@ class Game:
                 highlighted = (now <= self.highlight_until_ms) and ((c, r) in self.highlight_targets)
                 self.renderer.draw_cell(c, r, highlighted)
         self.renderer.draw_result_overlay(self._result_text())
+        
+        #NEW: for "RESTART"
+        result_text = self._result_text()
+        if result_text:
+            # Draw the game over or win overlay
+            self.renderer.draw_result_overlay(result_text)
+            # Draw the 'Press R to restart' message
+            self.renderer.draw_restart(result_text)
+
         pygame.display.flip()
 
     def run_step(self) -> bool:
