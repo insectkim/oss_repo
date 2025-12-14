@@ -76,7 +76,7 @@ class Renderer:
                     )
         pygame.draw.rect(self.screen, config.color_grid, rect, 1)
 
-    def draw_header(self, remaining_mines: int, time_text: str) -> None:
+    def draw_header(self, remaining_mines: int, time_text: str, hinttext:str="") -> None: #for issue5
         """Draw the header bar containing remaining mines and elapsed time."""
         pygame.draw.rect(
             self.screen,
@@ -88,6 +88,13 @@ class Renderer:
         left_label = self.header_font.render(left_text, True, config.color_header_text)
         right_label = self.header_font.render(right_text, True, config.color_header_text)
         self.screen.blit(left_label, (10, 12))
+
+        #NEW: for issue5
+        if hinttext:
+            hint_label=self.header_font.render(hinttext,True,config.color_header_text)
+            hint_x=(config.width-hint_label.get_width())//2
+            self.screen.blit(hint_label,(hint_x,12))
+
         self.screen.blit(right_label, (config.width - right_label.get_width() - 10, 12))
 
     def draw_result_overlay(self, text: str | None) -> None:
@@ -134,6 +141,23 @@ class InputController:
             return
 
         game = self.game
+        
+        #for issue 4-5 
+        if game.hintmode:
+            if game.hintmode <=0:
+                game.hintmode =False
+                return
+            
+            if game.board.is_inbounds(col,row):
+                    cell = game.board.cells[game.board.index(col, row)]
+                    if cell.state.is_mine:
+                        game.board.toggle_flag(col, row)
+                        game.hintnumber -= 1     
+                    elif not cell.state.is_revealed and not cell.state.is_mine:
+                        game.board.reveal(col, row)
+                        game.hintnumber -= 1
+            game.hintmode = False 
+            return
 
         if button == config.mouse_left:
             game.board.reveal(col, row)
@@ -167,6 +191,8 @@ class Game:
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
+        self.hintmode =False #for issue 4 & 5
+        self.hintnumber=5 #for issue 4 & 5
 
     def reset(self):
         """Reset the game state and start a new board."""
@@ -177,6 +203,10 @@ class Game:
         self.started = False
         self.start_ticks_ms = 0
         self.end_ticks_ms = 0
+
+        #NEW: for issue 4 & 5
+        self.hintmode = False
+        self.hintnumber =5
 
     def _elapsed_ms(self) -> int:
         """Return elapsed time in milliseconds (stops when game ends)."""
@@ -208,7 +238,12 @@ class Game:
         self.screen.fill(config.color_bg)
         remaining = max(0, config.num_mines - self.board.flagged_count())
         time_text = self._format_time(self._elapsed_ms())
-        self.renderer.draw_header(remaining, time_text)
+       
+       #NEW:for issue 5
+        hinttext_str = f"Hint: {self.hintnumber}" if self.hintnumber > 0 else "Hint: 0"
+        self.renderer.draw_header(remaining, time_text, hinttext_str)
+
+        
         now = pygame.time.get_ticks()
         
         for r in range(self.board.rows):
@@ -216,7 +251,6 @@ class Game:
                 highlighted = (now <= self.highlight_until_ms) and ((c, r) in self.highlight_targets)
                 self.renderer.draw_cell(c, r, highlighted, self.board.game_over) #added self.board.game_over for issue 3
         self.renderer.draw_result_overlay(self._result_text())
-        
         pygame.display.flip()
 
     def run_step(self) -> bool:
@@ -227,6 +261,11 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     self.reset()
+
+                elif event.key == pygame.K_h: #for issue 4 & 5
+                   self.hintmode= not self.hintmode
+
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.input.handle_mouse(event.pos, event.button)
                 
@@ -239,8 +278,7 @@ class Game:
         self.draw()
         self.clock.tick(config.fps)
         return True
-
-
+    
 def main() -> int:
     """Application entrypoint: run the main loop until quit."""
     game = Game()
